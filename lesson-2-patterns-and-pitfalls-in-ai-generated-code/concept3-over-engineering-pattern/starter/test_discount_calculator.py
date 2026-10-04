@@ -86,7 +86,6 @@ class TestOverEngineeringComparison:
             (50.0, "regular"), 
             (200.0, "vip"),
             (75.0, "student"),
-            (100.0, "unknown")
         ]
         
         for price, customer_type in test_cases:
@@ -96,6 +95,15 @@ class TestOverEngineeringComparison:
             assert original_result == ai_result, \
                 f"Results should be identical for {customer_type}: original={original_result}, ai={ai_result}"
     
+    def test_ai_version_changed_behavior_for_unknown_types(self):
+        """The AI version silently changed behavior nobody asked it to change"""
+        # Original: unknown customer types fall back to the 5% regular discount
+        assert original.calculate_discount(100.0, "unknown") == 5.0
+
+        # AI version: the same input now raises an error
+        with pytest.raises(ValueError):
+            ai_modified.calculate_discount(100.0, "unknown")
+
     def test_complexity_explosion_for_simple_request(self):
         """MAIN TEST: Shows how AI over-engineered a simple request"""
         
