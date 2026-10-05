@@ -7,6 +7,7 @@
 For each AI interaction, create a new entry with the following structure:
 
 ### Entry Template
+
 ```
 ## [Date] - [Brief Description]
 
@@ -22,103 +23,100 @@ For each AI interaction, create a new entry with the following structure:
 
 ---
 
-## Example Entry
+### 2026-10-5 - Building a spec.md for loading_data
 
-### 2024-01-15 - Initial Task Manager Implementation
-
-**Context:** I needed to create a basic task management system to demonstrate CRUD operations and serve as the foundation for the project.
-
-**AI Tool Used:** Claude
-
-**Prompt/Request:** "Help me create a Python class for managing tasks with basic CRUD operations. The class should handle task creation, retrieval, completion, and deletion. Include proper error handling and type hints."
-
-**AI Response:** Claude generated a TaskManager class with methods for add_task, get_task, get_all_tasks, complete_task, delete_task, and to_dict. The code included type hints, proper error handling with ValueError for missing tasks, and used datetime for timestamps.
-
-**Changes Made:** 
-- Added priority field to tasks with a default value of "medium"
-- Modified the task structure to include created_at timestamp
-- Added validation for priority values
-- Renamed some variable names for clarity
-
-**Reasoning:** 
-- Priority field will be useful for implementing sorting features later
-- Timestamps help with task organization and analytics
-- Input validation prevents invalid data from being stored
-- Better variable names improve code readability
-
-**Outcome:** Successfully created a robust TaskManager class that serves as the core of the application with room for future enhancements.
-
-**Lessons Learned:** 
-- AI provides good starting implementations but always needs customization
-- It's important to think about future requirements when reviewing AI code
-- Type hints and error handling are crucial for maintainable code
+Context: Following new practices outlined in the upcoming book 'AI-Native Software Engineering', I requested a specification file outlining exactly what needs to be built for loading data
+AI Tool Used: Gemma 3 4b
+Prompt: I need help building a spec.md for the first step: building a system to load and validate flashcard data. Please begin the interview and tell me where in the project workspace I should store spec.md
+AI Response: Through a few back and forth interactions, we built the file docs/specs/loading_data/spec.md
+Changes Made: Any ambiguities outlined by Gemini 3.8 Flash
+Reasoning: Gemma 3 was a smaller local model that didn't have full context of the project workspace
+Outcome: The final specification in spec.md
+Lessons Learned: Local AI is helpful but doesn't have a context window large enough to identify inconsistencies
 
 ---
 
 ## Your Log Entries
 
-### [Date] - [Brief Description]
+### 2026-10-05 - Implementing Data Loading & Validation with TDD and Strict Function Limits
 
-**Context:** 
+**Context:** Implementing the flashcard loading, normalization, and validation feature (`load_flashcard_data`) and associated unit tests per `tasks.md` and `spec.md`.
 
-**AI Tool Used:** 
+**AI Tool Used:** Gemini 3.8 Flash
 
-**Prompt/Request:** 
+**Prompt/Request:** Read spec.md, plan.md, and tasks.md carefully before starting.
 
-**AI Response:** 
+Implement every task in tasks.md, respecting the dependencies you find in the file. For each task: implement the change, verify the done check is met, and mark the task complete in tasks.md.
 
-**Changes Made:** 
+Where two tasks are independent of each other, dispatch them to separate subagents.
 
-**Reasoning:** 
+Do not modify spec.md or plan.md. If you hit a blocker you cannot resolve, stop and report what you tried.
 
-**Outcome:** 
+As you implement each task, maintain an implementation_notes.md file in the project directory. Record: any unexpected behavior you encountered in the existing code, decisions you made that weren’t covered by the plan, assumptions you’re working under, and anything that surprised you or that a future reader might find nonobvious. Keep each entry short, a sentence or two, with a timestamp or task reference.
 
-**Lessons Learned:** 
+**AI Response:** Generated unit test cases first (valid arrays/objects, bad syntax, missing keys, invalid types), implemented `load_flashcard_data`, and then refactored it from 54 lines down to 35 lines while preserving all validation logic and passing all 20 tests.
+
+**Changes Made:** Required tests to be written first one at a time, simplified regex error matching in tests to readable string matches, and mandated refactoring to keep the function under 40 lines.
+
+**Reasoning:** Incremental TDD with human approval prevents runaway code generation and hallucinated edge cases. Enforcing a strict 40-line limit guarantees maintainability, readability, and modular design.
+
+**Outcome:** Successfully built a compact 35-line `load_flashcard_data` function that normalizes formats, validates inputs, documents security considerations, and passes the entire 20-test test suite with 0 failures.
+
+**Lessons Learned:** Setting strict constraints (TDD cadence, <40 line limits, and review checkpoints) keeps AI-generated code concise, clean, and bug-free instead of sprawling and hard to maintain.
 
 ---
 
 ### [Date] - [Brief Description]
 
-**Context:** 
+**Context:**
 
-**AI Tool Used:** 
+**AI Tool Used:**
 
-**Prompt/Request:** 
+**Prompt/Request:** I want to build [one to three sentences describing the feature, goal, or change].
 
-**AI Response:** 
+Before writing anything, ask me as many questions as you need to write a complete spec.md: goal, context, constraints, acceptance criteria, and non-goals. Cover trade-offs, edge cases, failure modes, and concurrency where relevant. Do not write the spec until I tell you to.
 
-**Changes Made:** 
+When I am done answering, draft the spec.md in the standard format.
 
-**Reasoning:** 
+**AI Response:**
 
-**Outcome:** 
+**Changes Made:**
 
-**Lessons Learned:** 
+**Reasoning:**
+
+**Outcome:**
+
+**Lessons Learned:**
 
 ---
 
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests
+
 - ❌ "Write a function"
 - ✅ "Write a function that validates email addresses using regex, returns a boolean, and includes proper error handling"
 
 ### 2. Provide Context
+
 - Include relevant code snippets
 - Explain the larger goal
 - Mention any constraints or requirements
 
 ### 3. Review and Understand
+
 - Never copy AI code without understanding it
 - Ask for explanations of complex logic
 - Test the code before accepting it
 
 ### 4. Iterate and Refine
+
 - Use follow-up questions to improve the code
 - Ask for alternative implementations
 - Request code reviews and suggestions
 
 ### 5. Document Your Process
+
 - Keep detailed notes in this log
 - Explain your decision-making process
 - Track what works and what doesn't
@@ -126,21 +124,25 @@ For each AI interaction, create a new entry with the following structure:
 ## Common AI Collaboration Patterns
 
 ### Code Generation
+
 - Initial implementation of classes/functions
 - Boilerplate code creation
 - Test case generation
 
 ### Code Review
+
 - Ask AI to review your code for issues
 - Request suggestions for improvements
 - Get feedback on code structure
 
 ### Problem Solving
+
 - Debugging help
 - Algorithm suggestions
 - Architecture advice
 
 ### Learning and Explanation
+
 - Ask for explanations of complex concepts
 - Request examples of design patterns
 - Get guidance on best practices
@@ -159,12 +161,12 @@ As you work through the project, consider these questions:
 
 At the end of your project, fill out these statistics:
 
-- **Total AI interactions:** ___
-- **Lines of AI-generated code used:** ___
-- **Lines of AI-generated code modified:** ___
-- **Most helpful AI interaction:** ___
-- **Most challenging AI interaction:** ___
-- **Biggest lesson learned:** ___
+- **Total AI interactions:** \_\_\_
+- **Lines of AI-generated code used:** \_\_\_
+- **Lines of AI-generated code modified:** \_\_\_
+- **Most helpful AI interaction:** \_\_\_
+- **Most challenging AI interaction:** \_\_\_
+- **Biggest lesson learned:** \_\_\_
 
 ---
 

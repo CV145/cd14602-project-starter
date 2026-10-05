@@ -72,3 +72,107 @@ class TestFileHandler:
         assert len(files) == 2
         assert "file1.json" in files
         assert "file2.json" in files
+
+
+def test_load_valid_flashcards_array(tmp_path):
+    """Test loading flashcards from a valid JSON array format."""
+    import json
+    from utils.file_handler import load_flashcard_data
+
+    # Arrange
+    cards_data = [
+        {"front": "What is Python?", "back": "A programming language."},
+        {"front": "What is PEP 8?", "back": "Python style guide."}
+    ]
+    file_path = tmp_path / "valid_array.json"
+    file_path.write_text(json.dumps(cards_data), encoding="utf-8")
+
+    # Act
+    loaded_cards = load_flashcard_data(file_path)
+
+    # Assert
+    assert loaded_cards == cards_data
+    assert len(loaded_cards) == 2
+    assert loaded_cards[0]["front"] == "What is Python?"
+
+    # Security Vulnerabilities: None.
+
+
+def test_load_valid_flashcards_object(tmp_path):
+    """Test loading flashcards from a valid JSON object with cards array."""
+    import json
+    from utils.file_handler import load_flashcard_data
+
+    # Arrange
+    cards_data = [
+        {"front": "What is Python?", "back": "A programming language."}
+    ]
+    data = {"cards": cards_data}
+    file_path = tmp_path / "valid_object.json"
+    file_path.write_text(json.dumps(data), encoding="utf-8")
+
+    # Act
+    loaded_cards = load_flashcard_data(file_path)
+
+    # Assert
+    assert loaded_cards == cards_data
+    assert len(loaded_cards) == 1
+    assert loaded_cards[0]["front"] == "What is Python?"
+
+    # Security Vulnerabilities: None.
+
+
+def test_load_invalid_json(tmp_path):
+    """Test loading flashcards from a file with invalid JSON syntax."""
+    import pytest
+    from utils.file_handler import load_flashcard_data
+
+    # Arrange
+    file_path = tmp_path / "invalid.json"
+    file_path.write_text("{malformed_json: true", encoding="utf-8")
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Invalid JSON"):
+        load_flashcard_data(file_path)
+
+    # Security Vulnerabilities: None.
+
+
+def test_load_missing_required_field(tmp_path):
+    """Test that loading cards missing required fields raises ValueError."""
+    import json
+    import pytest
+    from utils.file_handler import load_flashcard_data
+
+    # Arrange
+    invalid_cards = [
+        {"front": "What is Python?"}
+    ]
+    file_path = tmp_path / "missing_back.json"
+    file_path.write_text(json.dumps(invalid_cards), encoding="utf-8")
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Missing required field 'back'"):
+        load_flashcard_data(file_path)
+
+    # Security Vulnerabilities: None.
+
+
+def test_load_non_string_field(tmp_path):
+    """Test that cards with non-string field values raise ValueError."""
+    import json
+    import pytest
+    from utils.file_handler import load_flashcard_data
+
+    # Arrange
+    invalid_cards = [
+        {"front": 123, "back": "A number."}
+    ]
+    file_path = tmp_path / "non_string_field.json"
+    file_path.write_text(json.dumps(invalid_cards), encoding="utf-8")
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="must be a string"):
+        load_flashcard_data(file_path)
+
+    # Security Vulnerabilities: None.

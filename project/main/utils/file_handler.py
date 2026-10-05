@@ -51,3 +51,40 @@ class FileHandler:
     def list_files(self) -> list[str]:
         """List all files in the data directory."""
         return [f.name for f in self.data_dir.iterdir() if f.is_file()]
+
+
+def load_flashcard_data(file_path: Path | str) -> list[dict[str, str]]:
+    """Load and validate flashcard data from a JSON file."""
+    path = Path(file_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Flashcard file not found: {file_path}")
+
+    try:
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON format: {exc}") from exc
+
+    raw_cards = data if isinstance(data, list) else (
+        data.get("cards") if isinstance(data, dict) else None
+    )
+    if not isinstance(raw_cards, list):
+        raise ValueError("Invalid JSON: expected list or 'cards' array")
+
+    validated: list[dict[str, str]] = []
+    for index, card in enumerate(raw_cards):
+        if not isinstance(card, dict):
+            raise ValueError(f"Card at index {index} must be a dictionary")
+        for field in ("front", "back"):
+            if field not in card:
+                raise ValueError(f"Missing required field '{field}'")
+            if not isinstance(card[field], str):
+                raise ValueError(f"Field '{field}' must be a string")
+            if not card[field].strip():
+                raise ValueError(f"Field '{field}' cannot be empty")
+        validated.append({"front": card["front"], "back": card["back"]})
+    return validated
+
+    # Security Vulnerabilities:
+    # 1. Path traversal: arbitrary file paths read without sandboxing.
+    # 2. DoS: large JSON files could cause high memory consumption.
