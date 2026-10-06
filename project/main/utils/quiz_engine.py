@@ -29,6 +29,31 @@ class Card:
         # Security Vulnerabilities: None.
 
 
+class StateFileError(Exception):
+    """Exception raised when persistent state JSON file is malformed."""
+
+    def __init__(
+        self,
+        path: Path | str,
+        line: int,
+        column: int,
+        message: str = "",
+    ) -> None:
+        """Initialize with file path, line, column, and message."""
+        self.path = Path(path)
+        self.line = line
+        self.column = column
+        self.message = message
+        err_msg = (
+            f"{self.path.name} is corrupt: {message} at line {line}, "
+            f"column {column}. Fix or delete the file."
+        )
+        super().__init__(err_msg)
+
+        # Edge Cases: Converts string or Path to Path object.
+        # Security Vulnerabilities: None.
+
+
 class QuizMode(ABC):
     """Abstract base class defining the quiz strategy contract."""
 
@@ -130,6 +155,7 @@ class AdaptiveStrategy(QuizMode):
         """Initialize adaptive queues, failure tracker, and intervals."""
         if not isinstance(cards, list):
             raise TypeError("Cards must be a list")
+        self._all_cards: list[Card] = list(cards)
         self.queues: dict[str, list[Card]] = {
             "new": list(cards),
             "5min": [],
@@ -145,37 +171,124 @@ class AdaptiveStrategy(QuizMode):
             "15min": 900.0,
         }
 
+        # Edge Cases: Defaults intervals to 300, 600, 900 seconds.
         # Security Vulnerabilities: None.
 
     def get_next_card(self) -> Card | None:
-        """Retrieve next card following priority order: new, 5, 10, 15min."""
-        for queue_name in ("new", "5min", "10min", "15min"):
-            queue = self.queues.get(queue_name, [])
-            if queue:
-                return queue.pop(0)
+        """Retrieve next due card following priority: new, 5, 10, 15min."""
+        if self.queues.get("new"):
+            return self.queues["new"].pop(0)
+        current_time = self._time_provider()
+        for q_name in ("5min", "10min", "15min"):
+            queue = self.queues.get(q_name, [])
+            interval = self.intervals[q_name]
+            for i, card in enumerate(queue):
+                last_seen = self.card_timestamps.get(card.front, 0.0)
+                if current_time - last_seen >= interval:
+                    return queue.pop(i)
         return None
 
+        # Edge Cases: Skips non-due cards; returns None when no cards are due.
         # Security Vulnerabilities: None.
 
-    def record_attempt(self, card: Card, is_correct: bool) -> None:
-        """Record attempt outcome and transition card between queues."""
+    def _resolve_fails(
+        self,
+        card: Card,
+        fails: int | bool,
+        is_correct: bool | None,
+    ) -> int:
+        """Resolve effective fail count supporting both legacy and new API."""
+        if is_correct is not None:
+            if is_correct:
+                return self._fails.pop(card.front, 0)
+            self._fails[card.front] = self._fails.get(card.front, 0) + 1
+            return min(self._fails[card.front], 2)
+        if isinstance(fails, bool):
+            if fails:
+                return self._fails.pop(card.front, 0)
+            self._fails[card.front] = self._fails.get(card.front, 0) + 1
+            return min(self._fails[card.front], 2)
+        self._fails[card.front] = fails
+        return fails
+
+        # Edge Cases: Bridges legacy bool is_correct and explicit int fails.
+        # Security Vulnerabilities: None.
+
+    def record_attempt(
+        self,
+        card: Card,
+        fails: int | bool = 0,
+        is_correct: bool | None = None,
+    ) -> None:
+        """Record attempt outcome and route to queue based on fail count."""
         for queue in self.queues.values():
             if card in queue:
                 queue.remove(card)
+        if card not in self._all_cards:
+            self._all_cards.append(card)
         self.card_timestamps[card.front] = self._time_provider()
-        if not is_correct:
-            self._fails[card.front] = self._fails.get(card.front, 0) + 1
-            self.queues["5min"].append(card)
-        else:
-            fails = self._fails.pop(card.front, 0)
-            if fails == 0:
-                target = "15min"
-            elif fails == 1:
-                target = "10min"
-            else:
-                target = "5min"
-            self.queues[target].append(card)
+        fail_count = self._resolve_fails(card, fails, is_correct)
+        target = "15min" if fail_count == 0 else (
+            "10min" if fail_count == 1 else "5min"
+        )
+        self.queues[target].append(card)
 
+        # Edge Cases: Routes 0->15m, 1->10m, 2+->5m; cleans old queues.
+        # Security Vulnerabilities: None.
+
+    def seconds_until_next_due(self) -> float | None:
+        """Calculate seconds until the next review card is due."""
+        if self.queues.get("new"):
+            return 0.0
+        current_time = self._time_provider()
+        min_rem: float | None = None
+        for q_name in ("5min", "10min", "15min"):
+            queue = self.queues.get(q_name, [])
+            interval = self.intervals[q_name]
+            for card in queue:
+                last_seen = self.card_timestamps.get(card.front, current_time)
+                rem = max(0.0, interval - (current_time - last_seen))
+                if min_rem is None or rem < min_rem:
+                    min_rem = rem
+        return min_rem
+
+        # Edge Cases: Returns 0.0 if new cards exist, None if queues are empty.
+        # Security Vulnerabilities: None.
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize queues, failure counts, and timestamps to dictionary."""
+        return {
+            "queues": {
+                k: [c.front for c in v]
+                for k, v in self.queues.items()
+            },
+            "fails": dict(self._fails),
+            "timestamps": dict(self.card_timestamps),
+        }
+
+        # Edge Cases: Serializes Card objects to string fronts.
+        # Security Vulnerabilities: None.
+
+    def from_dict(
+        self,
+        data: dict[str, Any],
+        cards: list[Card] | None = None,
+    ) -> None:
+        """Restore queues and state from dictionary using known cards."""
+        if cards is not None:
+            self._all_cards = list(cards)
+        card_map = {c.front: c for c in self._all_cards}
+        raw_queues = data.get("queues", {})
+        self.queues = {
+            k: [card_map[f] for f in raw_queues.get(k, []) if f in card_map]
+            for k in ("new", "5min", "10min", "15min")
+        }
+        self._fails = dict(data.get("fails", {}))
+        self.card_timestamps = {
+            k: float(v) for k, v in data.get("timestamps", {}).items()
+        }
+
+        # Edge Cases: Ignores missing card fronts not in known card pool.
         # Security Vulnerabilities: None.
 
     def has_cards(self) -> bool:
@@ -297,60 +410,127 @@ class QuizEngine:
         try:
             with open(self.state_path, "r", encoding="utf-8") as file:
                 return json.load(file)
-        except (json.JSONDecodeError, OSError):
-            return {}
+        except json.JSONDecodeError as exc:
+            raise StateFileError(
+                path=self.state_path,
+                line=exc.lineno,
+                column=exc.colno,
+                message=exc.msg,
+            ) from exc
 
-        # Edge Cases: Missing parent directories created; corrupt JSON -> {}.
+        # Edge Cases: Missing parent directories created; corrupt JSON raises.
         # Security Vulnerabilities: Path traversal if unvalidated path given.
 
     def _save_state(self) -> None:
-        """Persist updated quiz state to state_path."""
-        try:
-            with open(self.state_path, "w", encoding="utf-8") as file:
-                json.dump(self.state, file, indent=2)
-        except OSError:
-            pass
+        """Persist updated quiz state to state_path, propagating OSError."""
+        with open(self.state_path, "w", encoding="utf-8") as file:
+            json.dump(self.state, file, indent=2)
 
-        # Edge Cases: Handled OS filesystem write failures silently.
+        # Edge Cases: OSError propagated to caller for warning handling.
         # Security Vulnerabilities: None.
 
-    def answer_current_card(self, user_input: str) -> bool:
-        """Evaluate answer, update session and lifetime metrics, advance."""
+    def grade_current_card(self, user_input: str) -> bool:
+        """Grade user input for the current card without modifying state."""
         if self._current_card is None:
             self._current_card = self.strategy.get_next_card()
         if self._current_card is None:
             return False
-        is_correct = self._current_card.check_answer(user_input)
+        return self._current_card.check_answer(user_input)
+
+        # Edge Cases: None current card returns False safely.
+        # Security Vulnerabilities: None.
+
+    def record_result(self, is_correct: bool, fails: int = 0) -> None:
+        """Record final outcome, update metrics, write last_seen, advance."""
+        if self._current_card is None:
+            return
         if is_correct:
             self.session_correct += 1
         else:
             self.session_incorrect += 1
-        self.strategy.record_attempt(self._current_card, is_correct)
+        if isinstance(self.strategy, AdaptiveStrategy):
+            try:
+                self.strategy.record_attempt(self._current_card, fails)
+            except TypeError:
+                self.strategy.record_attempt(self._current_card, is_correct)
+        else:
+            self.strategy.record_attempt(self._current_card, is_correct)
         deck_stats = self.state.setdefault(self.deck_name, {})
         stats = deck_stats.setdefault(
-            self._current_card.front, {"correct": 0, "incorrect": 0}
+            self._current_card.front,
+            {"correct": 0, "incorrect": 0, "last_seen": 0.0},
         )
         stats["correct" if is_correct else "incorrect"] += 1
+        stats["last_seen"] = time.time()
         self._save_state()
         self._current_card = self.strategy.get_next_card()
+
+        # Edge Cases: None current card handled; updates last_seen timestamp.
+        # Security Vulnerabilities: None.
+
+    def answer_current_card(self, user_input: str) -> bool:
+        """Evaluate answer, update metrics, advance (one-attempt wrapper)."""
+        is_correct = self.grade_current_card(user_input)
+        if self._current_card is None:
+            return False
+        fails = 0 if is_correct else 1
+        self.record_result(is_correct, fails=fails)
         return is_correct
 
-        # Edge Cases: None cards remaining returns False safely.
+        # Edge Cases: None current card returns False safely.
         # Security Vulnerabilities: None.
 
     def get_lifetime_accuracy(self) -> float:
         """Calculate lifetime accuracy percentage across all card attempts."""
         deck_stats = self.state.get(self.deck_name, {})
         total_correct = sum(
-            stats.get("correct", 0) for stats in deck_stats.values()
+            card_stats.get("correct", 0)
+            for card_front, card_stats in deck_stats.items()
+            if card_front != "_settings" and isinstance(card_stats, dict)
         )
         total_incorrect = sum(
-            stats.get("incorrect", 0) for stats in deck_stats.values()
+            card_stats.get("incorrect", 0)
+            for card_front, card_stats in deck_stats.items()
+            if card_front != "_settings" and isinstance(card_stats, dict)
         )
         total_attempts = total_correct + total_incorrect
         if total_attempts == 0:
             return 0.0
         return (total_correct / total_attempts) * 100.0
 
-        # Edge Cases: Zero total attempts returns 0.0, avoiding division by 0.
+        # Edge Cases: Ignores _settings key; returns 0.0 if no attempts.
+        # Security Vulnerabilities: None.
+
+    def get_all_decks_stats(self) -> dict[str, Any]:
+        """Compute lifetime statistics across standard and upload decks."""
+        total_correct = 0
+        total_incorrect = 0
+        for deck_key, deck_data in self.state.items():
+            if (
+                deck_key == "_active_session"
+                or not isinstance(deck_data, dict)
+            ):
+                continue
+            for card_front, card_stats in deck_data.items():
+                if (
+                    card_front == "_settings"
+                    or not isinstance(card_stats, dict)
+                ):
+                    continue
+                total_correct += card_stats.get("correct", 0)
+                total_incorrect += card_stats.get("incorrect", 0)
+        total_attempts = total_correct + total_incorrect
+        accuracy = (
+            (total_correct / total_attempts) * 100.0
+            if total_attempts > 0
+            else 0.0
+        )
+        return {
+            "total_correct": total_correct,
+            "total_incorrect": total_incorrect,
+            "total_attempts": total_attempts,
+            "accuracy": accuracy,
+        }
+
+        # Edge Cases: Skips _active_session and _settings; 0 attempts -> 0.0%.
         # Security Vulnerabilities: None.

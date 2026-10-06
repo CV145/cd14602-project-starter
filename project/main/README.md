@@ -23,15 +23,67 @@ This is a Python project template for learning AI-assisted software development.
    pip install -r requirements.txt
    ```
 
-3. **Run the application:**
+3. **Run the application (CLI):**
    ```bash
-   python main.py
+   python main.py -f data/sample_deck.json -m sequential
    ```
 
-4. **Run tests:**
+4. **Launch Streamlit Web App:**
+   ```bash
+   streamlit run streamlit_frontend.py
+   ```
+
+5. **Run tests:**
    ```bash
    python -m pytest
    ```
+
+## 🎮 Flashcard Quizzer Interfaces
+
+### CLI Usage (`cli_frontend.py` & `main.py`)
+
+Run the CLI using `python main.py`:
+
+```bash
+python main.py [FLAGS]
+```
+
+#### Flags
+- `-f, --file PATH`: Optional. Path to flashcard deck JSON (≤ 1 MB). If omitted, automatically selects the latest non-upload deck studied from `data/quiz_state.json`.
+- `-m, --mode {sequential,random,adaptive}`: Quiz progression strategy (case-insensitive, defaults to `sequential`).
+  - `sequential`: Cycles through deck in order.
+  - `random`: Random selection without replacement.
+  - `adaptive`: Spaced Repetition Algorithm (SRA) with 2 attempts per card and priority queues (new → 5min → 10min → 15min).
+- `--stats`: Displays cross-deck lifetime accuracy and attempt totals in a formatted table and exits with code `0`.
+- `--state PATH`: Path to persistent state file (defaults to `data/quiz_state.json`).
+
+#### In-Quiz Commands & Interaction
+- Type your answer and press **Enter** (case-insensitive match).
+- `skip`: Skips current card, reveals answer, and records 1 incorrect (routes to 5min Difficult queue in adaptive mode).
+- `exit` or **Ctrl+C** / **Ctrl+D**: Prompts confirmation `Quit? (y/n)`. Confirmed quit displays end-of-session summary and exits cleanly with code `0`.
+- Collisions: If a card's answer is literally `exit` or `skip`, it is graded first and confirmation is prompted before recording.
+- Exit Codes: `0` on success or clean quit; `1` on all errors (single-line friendly message with no tracebacks).
+
+### Streamlit Web App (`streamlit_frontend.py`)
+
+Launch the local web dashboard:
+
+```bash
+streamlit run streamlit_frontend.py
+```
+
+Features:
+- Deck dropdown automatically populated from `data/*.json` (excluding state file).
+- File uploader for custom decks (`upload:<name>` namespace).
+- Interactive card view with instant feedback (`st.success` / `st.error`).
+- Adaptive queue counts, customizable review intervals, and deck progress reset.
+- Automatic session resumption prompt after page refresh.
+
+### ⚠️ Concurrency Constraint
+
+The application operates in a **single-user, single-active-process** model:
+- Only one front-end (CLI or Streamlit) should run at a time against `quiz_state.json`.
+- Running multiple instances or opening multiple concurrent browser tabs simultaneously is unsupported (last writer wins) as the system deliberately avoids distributed file locking complexities.
 
 ### 🛠️ Development Tools
 

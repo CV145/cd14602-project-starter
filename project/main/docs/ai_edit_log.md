@@ -87,6 +87,30 @@ As you implement each task, maintain an implementation_notes.md file in the proj
 
 ---
 
+### 2026-10-06 - Drafting UI Feature Specification (CLI & Streamlit)
+
+**Context:** Designing and drafting `docs/specs/UI/spec.md` to cover both a minimal rubric-compliant CLI (`cli_frontend.py`) and a polished Streamlit web application (`streamlit_frontend.py`).
+
+**AI Tool Used:** Claude 5.5 Opus / Antigravity Agent
+
+**Prompt/Request:** I want to build the CLI user interface for the application. But I also want to include a streamlit web app as well.
+
+Before writing anything, ask me as many questions as you need to write a complete spec.md: goal, context, constraints, acceptance criteria, and non-goals. Cover trade-offs, edge cases, failure modes, and concurrency where relevant. Do not write the spec until I tell you to. Ask me one question at a time.
+
+When I am done answering, draft the spec.md in the standard format.
+
+**AI Response:** Conducted a comprehensive, 39-question interactive interview covering front-end relationships, execution flags, adaptive 2-attempt flow, input validation, skip/exit command handling, corrupt state error reporting, Streamlit session persistence across refreshes, custom intervals, Facade architecture (`session_controller.py`), testing strategy, and explicit non-goals. Drafted the complete `spec.md` once instructed.
+
+**Changes Made:** Explicitly specified command collision semantics (grading typed `exit`/`skip` as answers first before asking if command intent was meant), required strict refusal to start on corrupt `quiz_state.json` with line/column details, defined state persistence for uploaded decks in Streamlit, and architected a shared `SessionController` Facade so neither frontend contains core quiz logic.
+
+**Reasoning:** Asking detailed questions one at a time before drafting prevented unwarranted assumptions about user interaction models and edge case behaviors. Structuring shared logic into a Facade enforces clean architecture and keeps both UI layers thin and maintainable.
+
+**Outcome:** Successfully generated a thorough, comprehensive `spec.md` in `docs/specs/UI/` outlining goals, constraints, file architecture, `quiz_state.json` schema updates, failure modes, edge cases, acceptance criteria, and explicit non-goals.
+
+**Lessons Learned:** Using an interactive Q&A discovery workflow before generating specifications ensures all edge cases (concurrency, session recovery, reserved keys, command collisions) are explicitly agreed upon before any code is written.
+
+---
+
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests
@@ -159,9 +183,9 @@ As you work through the project, consider these questions:
 At the end of your project, fill out these statistics:
 
 - **Total AI interactions:** \_\_\_
-- **Lines of AI-generated code used:** \_\_\_
-- **Lines of AI-generated code modified:** \_\_\_
-- **Most helpful AI interaction:** \_\_\_
+- **Lines of AI-generated code used:** Every single line was AI-generated.
+- **Lines of AI-generated code modified:** 0
+- **Most helpful AI interaction:** Writing the spec.md together.
 - **Most challenging AI interaction:** \_\_\_
 - **Biggest lesson learned:** \_\_\_
 
