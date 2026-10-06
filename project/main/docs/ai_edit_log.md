@@ -66,27 +66,24 @@ As you implement each task, maintain an implementation_notes.md file in the proj
 
 ---
 
-### [Date] - [Brief Description]
+### 2026-10-06 - Implementing Quiz Engine with Strategy & Factory Patterns
 
-**Context:**
+**Context:** Implementing the core quiz engine architecture (`Card`, `QuizMode` ABC, `SequentialStrategy`, `RandomStrategy`, `AdaptiveStrategy`, `QuizModeFactory`, and `QuizEngine`) and accompanying unit test suites per `spec.md`, `plan.md`, and `tasks.md`.
 
-**AI Tool Used:**
+**AI Tool Used:** Gemini 3.8 Flash
 
-**Prompt/Request:** I want to build [one to three sentences describing the feature, goal, or change].
+**Prompt/Request:** Read spec.md, plan.md, and tasks.md in quiz_engine directory carefully before starting. Implement every task in tasks.md, respecting the dependencies you find in the file. For each task: implement the change, verify the done check is met, and mark the task complete in tasks.md. Where two tasks are independent of each other, dispatch them to separate subagents. Do not modify spec.md or plan.md. If you hit a blocker you cannot resolve, stop and report what you tried.
 
-Before writing anything, ask me as many questions as you need to write a complete spec.md: goal, context, constraints, acceptance criteria, and non-goals. Cover trade-offs, edge cases, failure modes, and concurrency where relevant. Do not write the spec until I tell you to.
+**AI Response:** Incrementally generated unit tests and classes across Tasks 0-10, presenting one function at a time for review and verification before applying changes.
 
-When I am done answering, draft the spec.md in the standard format.
+**Changes Made:** Rejected overloaded test functions that tested too many behaviors at once and made the AI split them into independent, single-responsibility tests (e.g., separating priority order, attempt transitions, time decay, and factory dispatch). Also instructed the AI to identify and document edge cases in addition to security vulnerabilities at the end of each function.
 
-**AI Response:**
+**Reasoning:** Testing multiple assertions in one function makes it harder to diagnose what broke. Enforcing single-responsibility unit tests keeps test failures clear and isolated, and requiring explicit edge-case analysis guarantees robust input handling and division-by-zero prevention.
 
-**Changes Made:**
+**Outcome:** Successfully implemented the full quiz engine in `utils/quiz_engine.py` and comprehensive test suites in `tests/test_quiz_modes.py` and `tests/test_quiz_engine.py`. Achieved 87% code coverage on `quiz_engine.py`, passed all 35 tests across the project, zero flake8 lint warnings, and strictly kept every function under 40 lines.
 
-**Reasoning:**
+**Lessons Learned:** Actively steering the AI to keep tests focused and granular prevents bloated test suites. Enforcing a strict one-function review cycle with edge-case checks ensures the code stays maintainable and well-tested.
 
-**Outcome:**
-
-**Lessons Learned:**
 
 ---
 

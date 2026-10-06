@@ -11,3 +11,7 @@
 ### [2026-10-05] Tasks 2-8: JSON Parsing, Validation, Normalization, and Error Handling
 - Decision: Refactored `load_flashcard_data` into a compact 35-line implementation adhering to the <=40 lines constraint while upholding all validation rules.
 - Notes: Normalization unifies array format `[...]` and object format `{"cards": [...]}` into a uniform `list[dict[str, str]]`, rejecting empty strings, non-string types, and missing fields with clear `ValueError` messages.
+
+### [2026-10-06] Quiz Engine Tasks 0-10: Strategy & Factory Implementation
+- Decision: Implemented `Card`, `QuizMode` ABC, `SequentialStrategy`, `RandomStrategy`, `AdaptiveStrategy`, `QuizModeFactory`, and `QuizEngine` in `quiz_engine.py` using strict TDD, keeping every function under 40 lines.
+- Notes: Injected mockable `time_provider` for deterministic spaced repetition testing, supported both snake_case and camelCase factory aliases, achieved 87% test coverage, and documented edge cases and security vulnerabilities per method.
