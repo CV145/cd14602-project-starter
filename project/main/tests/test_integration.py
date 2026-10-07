@@ -34,7 +34,12 @@ def test_full_session(tmp_path, capsys):
     deck_path.write_text(json.dumps(cards_data), encoding="utf-8")
     state_path = tmp_path / "quiz_state.json"
     args = [
-        "-m", "sequential", "-f", str(deck_path), "--state", str(state_path)
+        "-m",
+        "sequential",
+        "-f",
+        str(deck_path),
+        "--state",
+        str(state_path),
     ]
     scripted_inputs = ["A1", "Wrong", "A3", "exit", "y"]
 

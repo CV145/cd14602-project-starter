@@ -1,6 +1,7 @@
 """Unit tests for SessionController Facade."""
 
 import json
+
 import pytest
 
 from utils.session_controller import SessionController

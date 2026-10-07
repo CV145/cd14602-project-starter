@@ -128,19 +128,16 @@ The project includes comprehensive unit tests demonstrating proper testing pract
 
 ### Tests Break Down
 
-**TaskManager Tests (`test_task_manager.py`):**
-- `test_add_task_returns_id()` - Verifies task creation returns valid ID
-- `test_get_task_by_id()` - Tests task retrieval with proper data structure
-- `test_complete_task()` - Validates task completion with timestamps
-- `test_delete_task()` - Ensures proper task deletion and error handling
-- `test_get_nonexistent_task_raises_error()` - Tests error handling for invalid IDs
+The test suite contains 95 tests across 8 modules achieving 95% total code coverage:
 
-**FileHandler Tests (`test_file_handler.py`):**
-- `test_save_data_creates_file()` - Verifies JSON file creation and content
-- `test_load_nonexistent_file_returns_empty_dict()` - Tests graceful error handling
-- `test_file_exists()` - Validates file existence checking
-- `test_delete_file()` - Tests file cleanup functionality
-- `test_list_files()` - Verifies directory listing capabilities
+- **Quiz Modes (`test_quiz_modes.py`)**: Tests Strategy pattern implementations (`SequentialStrategy`, `RandomStrategy`, `AdaptiveStrategy`), Spaced Repetition queue routing, priority serving (new → 5min → 10min → 15min), and time decay.
+- **Quiz Engine (`test_quiz_engine.py`)**: Tests engine orchestration, session scoring, corrupted state JSON detection (`StateFileError`), and atomic state file persistence.
+- **Session Controller (`test_session_controller.py`)**: Tests the Facade pattern managing user turn processing, adaptive retry loops, command vs answer collision disambiguation, and session recovery.
+- **CLI Frontend (`test_cli_frontend.py`)**: Validates argument parsing, exit codes (code 1 on error, code 0 on quit), formatted Rich tables, and interactive quit confirmation.
+- **Streamlit Frontend (`test_streamlit_frontend.py`)**: Headless UI testing using Streamlit's `AppTest` framework covering session initialization, card advancement, feedback persistence, and deck resets.
+- **Integration Tests (`test_integration.py`)**: Full end-to-end integration flows through the flashcard lifecycle.
+- **File Handler (`test_file_handler.py`)**: Tests data validation, schema normalization, path traversal guards, and file size limits.
+- **TaskManager (`test_task_manager.py`)**: Verifies legacy starter CRUD task operations.
 
 ```bash
 # Run all tests
@@ -223,30 +220,39 @@ Your project will be evaluated on:
 ### Project Structure
 
 ```
-starter/
-├── main.py                 # Main application entry point
-├── utils/                  # Utility modules
+project/main/
+├── main.py                     # CLI entry point wrapper
+├── cli_frontend.py             # Rich terminal CLI frontend
+├── streamlit_frontend.py       # Streamlit web frontend
+├── utils/                      # Core business logic & architecture
 │   ├── __init__.py
-│   ├── task_manager.py     # Task management functionality
-│   └── file_handler.py     # File I/O operations
-├── tests/                  # Unit test suite
+│   ├── quiz_engine.py          # Strategy & Factory patterns (SRA queues, cards)
+│   ├── session_controller.py   # Facade pattern (turn processing, state tracking)
+│   ├── file_handler.py         # File loading, validation, and JSON I/O
+│   └── task_manager.py         # Starter CRUD task utility
+├── tests/                      # Comprehensive 95-test unit & integration suite
 │   ├── __init__.py
-│   ├── test_task_manager.py
-│   └── test_file_handler.py
-├── docs/                   # Documentation and templates
-│   ├── ai_edit_log.md      # AI interaction tracking
-│   ├── design_patterns.md  # Design pattern examples
-│   └── report_template.md  # Final report template
-├── ai_guidance/            # AI prompting best practices
-│   ├── prompting_best_practices.md
-│   └── code_review_checklist.md
-├── .claude/                # Claude-specific configuration
-│   ├── CLAUDE.md           # Claude configuration
-│   ├── commands/           # Slash commands
-│   └── mcp.json           # MCP configuration
-├── requirements.txt        # Python dependencies
-├── .editorconfig          # Code formatting rules
-└── README.md              # This file
+│   ├── test_quiz_modes.py      # Strategy pattern tests
+│   ├── test_quiz_engine.py     # Engine scoring & persistence tests
+│   ├── test_session_controller.py # Facade controller turn tests
+│   ├── test_cli_frontend.py    # CLI interaction & argument tests
+│   ├── test_streamlit_frontend.py # Streamlit AppTest headless tests
+│   ├── test_integration.py     # End-to-end integration flows
+│   ├── test_file_handler.py    # Data validation tests
+│   └── test_task_manager.py    # Task CRUD tests
+├── data/                       # Bundled flashcard decks & state
+│   ├── python_basics.json
+│   ├── git_and_github.json
+│   ├── sample_deck.json
+│   └── quiz_state.json         # Persistent user progress & review timestamps
+├── docs/                       # Project specifications & documentation
+│   ├── ai_edit_log.md          # AI interaction tracking log
+│   ├── design_patterns.md      # Design pattern documentation
+│   ├── report_template.md      # Final project report template
+│   └── specs/                  # Feature specifications and task breakdowns
+├── ai_guidance/                # Prompting practices and review checklists
+├── requirements.txt            # Project dependencies
+└── README.md                  # Project overview & documentation
 ```
 
 ## Built With

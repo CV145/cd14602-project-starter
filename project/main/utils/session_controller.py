@@ -1,11 +1,10 @@
 """Session controller facade managing quiz rules, flows, and state."""
 
-from collections import Counter
 import json
+from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-from dataclasses import dataclass
 
 from utils.file_handler import load_flashcard_data
 from utils.quiz_engine import (
@@ -70,9 +69,7 @@ class SessionController:
             with open(self.state_path, "r", encoding="utf-8") as f:
                 st = json.load(f)
             return (
-                st.get(self.deck_key, {})
-                .get("_settings", {})
-                .get("intervals")
+                st.get(self.deck_key, {}).get("_settings", {}).get("intervals")
             )
         except (json.JSONDecodeError, OSError):
             return None
@@ -291,6 +288,10 @@ class SessionController:
         if confirmed:
             if cmd == "exit":
                 return InputResult(status="exit")
+            if card is None:
+                return InputResult(
+                    status="completed", message="Quiz completed"
+                )
             return self._handle_skip(card)
 
         fails = 0 if self.current_attempt == 1 else 1
@@ -299,7 +300,7 @@ class SessionController:
         self._save_active_session()
         return InputResult(status="correct", message="✔ Correct", attempt=1)
 
-        # Edge Cases: Confirmed quit drops grade; declined confirms answer.
+        # Edge Cases: Confirmed quit drops grade; handles None card gracefully.
         # Security Vulnerabilities: None.
 
     def _save_active_session(self) -> None:

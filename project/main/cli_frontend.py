@@ -1,16 +1,16 @@
 """Command-line interface for Flashcard Quizzer using Rich."""
 
 import argparse
-from pathlib import Path
 import sys
-from typing import Sequence
+from pathlib import Path
+from typing import NoReturn, Sequence
 
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
 from utils.quiz_engine import QuizEngine, SequentialStrategy, StateFileError
-from utils.session_controller import SessionController
+from utils.session_controller import InputResult, SessionController
 
 console = Console(highlight=False)
 
@@ -18,7 +18,7 @@ console = Console(highlight=False)
 class FriendlyArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser that outputs red errors and exits code 1."""
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         """Print friendly red error and exit with status 1."""
         err_console = Console(stderr=True, highlight=False)
         err_console.print(f"[bold red]Error:[/bold red] {message}")
@@ -68,9 +68,7 @@ def display_lifetime_stats(state_path: Path) -> int:
     table.add_column("Total Correct", justify="center", style="green")
     table.add_column("Total Incorrect", justify="center", style="red")
     table.add_column("Total Attempts", justify="center", style="cyan")
-    table.add_column(
-        "Overall Accuracy", justify="center", style="bold yellow"
-    )
+    table.add_column("Overall Accuracy", justify="center", style="bold yellow")
     table.add_row(
         str(all_stats["total_correct"]),
         str(all_stats["total_incorrect"]),
@@ -84,9 +82,7 @@ def display_lifetime_stats(state_path: Path) -> int:
     # Security Vulnerabilities: None.
 
 
-def _resolve_deck_path(
-    file_arg: str | None, state_path: Path
-) -> Path | None:
+def _resolve_deck_path(file_arg: str | None, state_path: Path) -> Path | None:
     """Resolve user-provided deck path or discover the latest deck."""
     if file_arg:
         path = Path(file_arg)
@@ -189,7 +185,7 @@ def _handle_card_turn(controller: SessionController) -> bool:
 
 
 def _process_turn_result(
-    controller: SessionController, res: object
+    controller: SessionController, res: InputResult
 ) -> bool:
     """Display feedback and execute actions based on turn InputResult."""
     if res.status == "empty":
@@ -222,7 +218,10 @@ def run_quiz_loop(controller: SessionController) -> int:
         card = controller.get_current_card()
         if card is None:
             if controller.mode == "adaptive":
-                rem = controller.engine.strategy.seconds_until_next_due()
+                get_rem = getattr(
+                    controller.engine.strategy, "seconds_until_next_due", None
+                )
+                rem = get_rem() if callable(get_rem) else None
                 if rem is not None and rem > 0:
                     mins = max(1, int(round(rem / 60.0)))
                     console.print(

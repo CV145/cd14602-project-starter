@@ -5,9 +5,11 @@ These tests demonstrate file I/O testing patterns and proper
 cleanup of test artifacts.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
+
+import pytest
+
 from utils.file_handler import FileHandler
 
 
@@ -76,12 +78,13 @@ class TestFileHandler:
 def test_load_valid_flashcards_array(tmp_path):
     """Test loading flashcards from a valid JSON array format."""
     import json
+
     from utils.file_handler import load_flashcard_data
 
     # Arrange
     cards_data = [
         {"front": "What is Python?", "back": "A programming language."},
-        {"front": "What is PEP 8?", "back": "Python style guide."}
+        {"front": "What is PEP 8?", "back": "Python style guide."},
     ]
     file_path = tmp_path / "valid_array.json"
     file_path.write_text(json.dumps(cards_data), encoding="utf-8")
@@ -100,6 +103,7 @@ def test_load_valid_flashcards_array(tmp_path):
 def test_load_valid_flashcards_object(tmp_path):
     """Test loading flashcards from a valid JSON object with cards array."""
     import json
+
     from utils.file_handler import load_flashcard_data
 
     # Arrange
@@ -124,6 +128,7 @@ def test_load_valid_flashcards_object(tmp_path):
 def test_load_invalid_json(tmp_path):
     """Test loading flashcards from a file with invalid JSON syntax."""
     import pytest
+
     from utils.file_handler import load_flashcard_data
 
     # Arrange
@@ -140,13 +145,13 @@ def test_load_invalid_json(tmp_path):
 def test_load_missing_required_field(tmp_path):
     """Test that loading cards missing required fields raises ValueError."""
     import json
+
     import pytest
+
     from utils.file_handler import load_flashcard_data
 
     # Arrange
-    invalid_cards = [
-        {"front": "What is Python?"}
-    ]
+    invalid_cards = [{"front": "What is Python?"}]
     file_path = tmp_path / "missing_back.json"
     file_path.write_text(json.dumps(invalid_cards), encoding="utf-8")
 
@@ -160,13 +165,13 @@ def test_load_missing_required_field(tmp_path):
 def test_load_non_string_field(tmp_path):
     """Test that cards with non-string field values raise ValueError."""
     import json
+
     import pytest
+
     from utils.file_handler import load_flashcard_data
 
     # Arrange
-    invalid_cards = [
-        {"front": 123, "back": "A number."}
-    ]
+    invalid_cards = [{"front": 123, "back": "A number."}]
     file_path = tmp_path / "non_string_field.json"
     file_path.write_text(json.dumps(invalid_cards), encoding="utf-8")
 

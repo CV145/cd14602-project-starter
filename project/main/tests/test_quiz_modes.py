@@ -1,6 +1,7 @@
 """Unit tests for quiz modes and strategy pattern implementations."""
 
 import pytest
+
 from utils.quiz_engine import (
     AdaptiveStrategy,
     Card,

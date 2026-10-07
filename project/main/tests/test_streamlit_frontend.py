@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
 APP_PATH = str(Path(__file__).parent.parent / "streamlit_frontend.py")
@@ -257,4 +258,196 @@ def test_streamlit_custom_file_upload(tmp_path):
     # Edge Cases: File uploader accepts JSON decks with upload: namespace.
     # Security Vulnerabilities: None.
 
+
+def test_streamlit_submit_advances_to_next_card(tmp_path):
+    """Test submitting correct answer advances to next card without prompt."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [
+        {"front": "Q1", "back": "Ans1"},
+        {"front": "Q2", "back": "Ans2"},
+    ]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.text_input(key="user_answer").input("Ans1")
+    at.button(key="submit_button").click().run()
+
+    # Assert
+    assert any("Q2" in m.value for m in at.markdown)
+    assert any("Correct" in s.value for s in at.success)
+    assert len([b for b in at.button if b.key == "resume_session_btn"]) == 0
+
+    # Edge Cases: Submitting correct answer advances to Card 2 without prompt.
+    # Security Vulnerabilities: None.
+
+
+def test_streamlit_submit_incorrect_advances_to_next_card(tmp_path):
+    """Test wrong answer advances to next card without resume prompt."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [
+        {"front": "Q1", "back": "Ans1"},
+        {"front": "Q2", "back": "Ans2"},
+    ]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.text_input(key="user_answer").input("WrongAns")
+    at.button(key="submit_button").click().run()
+
+    # Assert
+    assert any("Q2" in m.value for m in at.markdown)
+    assert any("Incorrect" in e.value for e in at.error)
+    assert len([b for b in at.button if b.key == "resume_session_btn"]) == 0
+
+    # Edge Cases: Wrong answer advances to Card 2 and suppresses prompt.
+    # Security Vulnerabilities: None.
+
+
+def test_streamlit_skip_advances_to_next_card(tmp_path):
+    """Test clicking skip advances to next card without resume prompt."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [
+        {"front": "Q1", "back": "Ans1"},
+        {"front": "Q2", "back": "Ans2"},
+    ]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.button(key="skip_button").click().run()
+
+    # Assert
+    assert any("Q2" in m.value for m in at.markdown)
+    assert any("Skipped" in w.value for w in at.warning)
+    assert len([b for b in at.button if b.key == "resume_session_btn"]) == 0
+
+    # Edge Cases: Skip advances to Card 2 and suppresses resume dialog.
+    # Security Vulnerabilities: None.
+
+
+def test_streamlit_resume_session_displays_resumed_card(tmp_path):
+    """Test clicking resume session dismisses prompt and displays card."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [
+        {"front": "Q1", "back": "Ans1"},
+        {"front": "Q2", "back": "Ans2"},
+    ]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+    active_sess = {
+        "deck_key": "deck",
+        "source": str(deck),
+        "cards": [{"front": "Q2", "back": "Ans2"}],
+        "mode": "sequential",
+        "current_front": "Q2",
+    }
+    state_file.write_text(
+        json.dumps({"_active_session": active_sess}), encoding="utf-8"
+    )
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.button(key="resume_session_btn").click().run()
+
+    # Assert
+    assert any("Q2" in m.value for m in at.markdown)
+    assert len([b for b in at.button if b.key == "resume_session_btn"]) == 0
+
+    # Edge Cases: Resumes saved active card and dismisses prompt dialog.
+    # Security Vulnerabilities: None.
+
+
+def test_streamlit_completed_deck_clears_active_session(tmp_path):
+    """Test finishing final card clears active session and shows caught up."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [{"front": "Q1", "back": "Ans1"}]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.sidebar.selectbox(key="mode_select").select("adaptive").run()
+    at.text_input(key="user_answer").input("Ans1")
+    at.button(key="submit_button").click().run()
+
+    # Assert
+    assert any("All caught up!" in s.value for s in at.success)
+    saved = json.loads(state_file.read_text(encoding="utf-8"))
+    assert "_active_session" not in saved
+
+    # Edge Cases: Deck completion removes _active_session from storage.
+    # Security Vulnerabilities: None.
+
+
+def test_streamlit_deck_reset_restarts_deck(tmp_path):
+    """Test confirming deck reset restarts quiz session from card 1."""
+    # Arrange
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    deck = data_dir / "deck.json"
+    cards = [
+        {"front": "Q1", "back": "Ans1"},
+        {"front": "Q2", "back": "Ans2"},
+    ]
+    deck.write_text(json.dumps(cards), encoding="utf-8")
+    state_file = tmp_path / "quiz_state.json"
+
+    # Act
+    at = AppTest.from_file(APP_PATH)
+    at.session_state["data_dir"] = str(data_dir)
+    at.session_state["state_path"] = str(state_file)
+    at.run()
+
+    at.text_input(key="user_answer").input("Ans1")
+    at.button(key="submit_button").click().run()
+    assert any("Q2" in m.value for m in at.markdown)
+
+    at.sidebar.button(key="reset_progress_btn").click().run()
+    at.sidebar.button(key="confirm_reset_btn").click().run()
+
+    # Assert
+    assert any("Q1" in m.value for m in at.markdown)
+    assert len([b for b in at.button if b.key == "resume_session_btn"]) == 0
+
+    # Edge Cases: Reset progress returns session display to Card 1.
     # Security Vulnerabilities: None.

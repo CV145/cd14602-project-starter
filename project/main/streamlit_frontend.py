@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from typing import Any
+
 import streamlit as st
 
 from utils.quiz_engine import AdaptiveStrategy
@@ -66,6 +67,30 @@ def _discover_deck_options(data_dir: Path, state_path: Path) -> list[str]:
     # Security Vulnerabilities: None.
 
 
+def _get_or_create_controller(
+    deck_path: Path, mode: str, state_path: Path
+) -> SessionController:
+    """Retrieve cached SessionController or initialize on deck/mode shift."""
+    curr_deck = str(deck_path)
+    if (
+        st.session_state.get("controller") is None
+        or st.session_state.get("active_deck") != curr_deck
+        or st.session_state.get("active_mode") != mode
+    ):
+        st.session_state["controller"] = SessionController(
+            deck_path, mode=mode, state_path=state_path
+        )
+        st.session_state["active_deck"] = curr_deck
+        st.session_state["active_mode"] = mode
+        st.session_state["session_active"] = False
+        st.session_state["feedback"] = None
+
+    return st.session_state["controller"]
+
+    # Edge Cases: Resets session_active and feedback on deck or mode shift.
+    # Security Vulnerabilities: None.
+
+
 def _render_intervals_config(controller: SessionController) -> None:
     """Render adaptive interval selection dropdowns in sidebar."""
     st.sidebar.markdown("### Adaptive Intervals")
@@ -106,6 +131,9 @@ def _render_sidebar(
         st.sidebar.warning("Reset all card progress for this deck?")
         if st.sidebar.button("Confirm Reset", key="confirm_reset_btn"):
             controller.reset_deck_progress()
+            st.session_state["controller"] = None
+            st.session_state["feedback"] = None
+            st.session_state["session_active"] = False
             st.session_state["show_reset_confirm"] = False
             st.rerun()
 
@@ -114,7 +142,7 @@ def _render_sidebar(
 
     _render_stats_panel(controller)
 
-    # Edge Cases: Handles reset confirmation toggle and adaptive intervals.
+    # Edge Cases: Purges cached controller and feedback on confirmed reset.
     # Security Vulnerabilities: None.
 
 
@@ -140,33 +168,42 @@ def _render_stats_panel(controller: SessionController) -> None:
 
 
 def _handle_submission(controller: SessionController) -> None:
-    """Process answer or skip action from card interaction form."""
+    """Process answer submission and save feedback for next render pass."""
     ans = st.session_state.get("user_answer", "")
     res = controller.process_input(ans)
     if res.status == "empty":
         st.warning("Please type an answer (or click Skip)")
-    elif res.status == "correct":
-        st.success("✔ Correct!")
-    elif res.status == "retry":
-        st.error(res.message)
-    elif res.status == "incorrect":
-        st.error(f"✘ Incorrect. Answer: {res.correct_answer}")
-    elif res.status == "skip":
-        st.warning(f"Skipped. Answer: {res.correct_answer}")
+        return
 
-    # Edge Cases: Distinguishes retry banner from final incorrect outcome.
+    if res.status == "retry":
+        st.session_state["feedback"] = ("error", res.message)
+    elif res.status == "correct":
+        st.session_state["feedback"] = ("success", "✔ Correct!")
+    elif res.status == "incorrect":
+        msg = f"✘ Incorrect. Answer: {res.correct_answer}"
+        st.session_state["feedback"] = ("error", msg)
+
+    st.rerun()
+
+    # Edge Cases: Inline warning on empty input; queues feedback & reruns.
     # Security Vulnerabilities: None.
 
 
 def _render_card_panel(controller: SessionController) -> None:
     """Render flashcard front, answer form, and feedback."""
+    st.session_state["session_active"] = True
+    feedback = st.session_state.pop("feedback", None)
+    if feedback:
+        getattr(st, feedback[0], st.info)(feedback[1])
+
     card = controller.get_current_card()
     if card is None:
+        controller.discard_active_session()
         st.success("🎉 All caught up!")
         return
 
     st.markdown(f"## Card: {card.front}")
-    with st.form("quiz_form"):
+    with st.form("quiz_form", clear_on_submit=True):
         st.text_input("Your Answer:", key="user_answer")
         col1, col2 = st.columns(2)
         submit = col1.form_submit_button("Submit", key="submit_button")
@@ -175,14 +212,19 @@ def _render_card_panel(controller: SessionController) -> None:
             _handle_submission(controller)
         elif skip:
             res = controller.process_input("skip")
-            st.warning(f"Skipped. Answer: {res.correct_answer}")
+            msg = f"Skipped. Answer: {res.correct_answer}"
+            st.session_state["feedback"] = ("warning", msg)
+            st.rerun()
 
-    # Edge Cases: Handles form enter-key submission and skip button.
+    # Edge Cases: Clears active session on completion; queues skip feedback.
     # Security Vulnerabilities: Safe rendering without HTML injection.
 
 
 def _render_resume_prompt(controller: SessionController) -> bool:
     """Check for active session and render resume/discard dialog."""
+    if st.session_state.get("session_active") is True:
+        return False
+
     active_sess = controller.engine.state.get("_active_session")
     if not active_sess or not isinstance(active_sess, dict):
         return False
@@ -193,13 +235,17 @@ def _render_resume_prompt(controller: SessionController) -> bool:
     col1, col2 = st.columns(2)
     if col1.button("Resume Session", key="resume_session_btn"):
         controller.resume_active_session()
+        st.session_state["session_active"] = True
+        st.session_state["feedback"] = None
         st.rerun()
     if col2.button("Discard Session", key="discard_session_btn"):
         controller.discard_active_session()
+        st.session_state["session_active"] = True
+        st.session_state["feedback"] = None
         st.rerun()
     return True
 
-    # Edge Cases: Restores or discards previous incomplete session.
+    # Edge Cases: Skips prompt when session_active is True; clears feedback.
     # Security Vulnerabilities: None.
 
 
@@ -230,8 +276,8 @@ def main() -> None:
         return
 
     deck_path = data_dir / selected_deck
-    controller = SessionController(
-        deck_path, mode=selected_mode, state_path=state_path
+    controller = _get_or_create_controller(
+        deck_path, selected_mode, state_path
     )
 
     _render_sidebar(controller, data_dir, state_path)

@@ -6,8 +6,8 @@ patterns that students can learn from and extend.
 """
 
 import json
-from typing import Any, Dict
 from pathlib import Path
+from typing import Any, Dict
 
 
 class FileHandler:
@@ -25,7 +25,7 @@ class FileHandler:
         """Save data to a JSON file."""
         filepath = self.data_dir / filename
         try:
-            with open(filepath, 'w', encoding='utf-8') as file:
+            with open(filepath, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2, ensure_ascii=False)
         except (IOError, TypeError) as e:
             raise RuntimeError(f"Failed to save data to {filename}: {e}")
@@ -34,7 +34,7 @@ class FileHandler:
         """Load data from a JSON file."""
         filepath = self.data_dir / filename
         try:
-            with open(filepath, 'r', encoding='utf-8') as file:
+            with open(filepath, "r", encoding="utf-8") as file:
                 return json.load(file)
         except FileNotFoundError:
             return {}
@@ -68,8 +68,10 @@ def load_flashcard_data(file_path: Path | str) -> list[dict[str, str]]:
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON format: {exc}") from exc
 
-    raw_cards = data if isinstance(data, list) else (
-        data.get("cards") if isinstance(data, dict) else None
+    raw_cards = (
+        data
+        if isinstance(data, list)
+        else (data.get("cards") if isinstance(data, dict) else None)
     )
     if not isinstance(raw_cards, list):
         raise ValueError("Invalid JSON: expected list or 'cards' array")

@@ -6,6 +6,7 @@ examples for students to follow when writing their own tests.
 """
 
 import pytest
+
 from utils.task_manager import TaskManager
 
 

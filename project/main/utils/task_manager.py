@@ -5,8 +5,8 @@ This module shows how to structure a simple data management class
 that students can extend with AI assistance.
 """
 
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
 
 
 class TaskManager:
@@ -27,7 +27,7 @@ class TaskManager:
             "description": description,
             "priority": priority,
             "completed": False,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
         }
         self._tasks.append(task)
         self._next_id += 1
@@ -56,7 +56,4 @@ class TaskManager:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
-        return {
-            "tasks": self._tasks,
-            "next_id": self._next_id
-        }
+        return {"tasks": self._tasks, "next_id": self._next_id}

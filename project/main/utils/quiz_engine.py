@@ -1,10 +1,10 @@
 """Quiz engine implementing Strategy and Factory patterns."""
 
-from abc import ABC, abstractmethod
 import json
-from pathlib import Path
 import random
 import time
+from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any
 
 
@@ -149,7 +149,7 @@ class AdaptiveStrategy(QuizMode):
     def __init__(
         self,
         cards: list[Card],
-        time_provider: object = None,
+        time_provider: Any = None,
         custom_intervals: dict[str, float] | None = None,
     ) -> None:
         """Initialize adaptive queues, failure tracker, and intervals."""
@@ -164,7 +164,7 @@ class AdaptiveStrategy(QuizMode):
         }
         self._fails: dict[str, int] = {}
         self.card_timestamps: dict[str, float] = {}
-        self._time_provider = time_provider or time.time
+        self._time_provider: Any = time_provider or time.time
         self.intervals = custom_intervals or {
             "5min": 300.0,
             "10min": 600.0,
@@ -217,8 +217,8 @@ class AdaptiveStrategy(QuizMode):
     def record_attempt(
         self,
         card: Card,
-        fails: int | bool = 0,
-        is_correct: bool | None = None,
+        is_correct: Any = True,
+        fails: int | bool | None = None,
     ) -> None:
         """Record attempt outcome and route to queue based on fail count."""
         for queue in self.queues.values():
@@ -227,9 +227,16 @@ class AdaptiveStrategy(QuizMode):
         if card not in self._all_cards:
             self._all_cards.append(card)
         self.card_timestamps[card.front] = self._time_provider()
-        fail_count = self._resolve_fails(card, fails, is_correct)
-        target = "15min" if fail_count == 0 else (
-            "10min" if fail_count == 1 else "5min"
+        if fails is None and not isinstance(is_correct, bool):
+            fails = is_correct
+            is_correct = None
+        eff_fails = 0 if fails is None else fails
+        eff_correct = is_correct if fails is None else None
+        fail_count = self._resolve_fails(card, eff_fails, eff_correct)
+        target = (
+            "15min"
+            if fail_count == 0
+            else ("10min" if fail_count == 1 else "5min")
         )
         self.queues[target].append(card)
 
@@ -259,8 +266,7 @@ class AdaptiveStrategy(QuizMode):
         """Serialize queues, failure counts, and timestamps to dictionary."""
         return {
             "queues": {
-                k: [c.front for c in v]
-                for k, v in self.queues.items()
+                k: [c.front for c in v] for k, v in self.queues.items()
             },
             "fails": dict(self._fails),
             "timestamps": dict(self.card_timestamps),
@@ -304,10 +310,11 @@ class AdaptiveStrategy(QuizMode):
         current_time = self._time_provider() if now is None else now
         for queue_name in ("15min", "10min"):
             expired = [
-                c for c in self.queues[queue_name]
-                if current_time - self.card_timestamps.get(
-                    c.front, current_time
-                ) >= self.intervals[queue_name]
+                c
+                for c in self.queues[queue_name]
+                if current_time
+                - self.card_timestamps.get(c.front, current_time)
+                >= self.intervals[queue_name]
             ]
             for card in expired:
                 self.queues[queue_name].remove(card)
@@ -360,7 +367,7 @@ class QuizModeFactory:
         cls,
         mode_name: str,
         cards: list[Card],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> QuizMode:
         """Create a QuizMode strategy dynamically based on mode name."""
         if not isinstance(mode_name, str):
@@ -506,15 +513,13 @@ class QuizEngine:
         total_correct = 0
         total_incorrect = 0
         for deck_key, deck_data in self.state.items():
-            if (
-                deck_key == "_active_session"
-                or not isinstance(deck_data, dict)
+            if deck_key == "_active_session" or not isinstance(
+                deck_data, dict
             ):
                 continue
             for card_front, card_stats in deck_data.items():
-                if (
-                    card_front == "_settings"
-                    or not isinstance(card_stats, dict)
+                if card_front == "_settings" or not isinstance(
+                    card_stats, dict
                 ):
                     continue
                 total_correct += card_stats.get("correct", 0)
