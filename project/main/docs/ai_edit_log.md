@@ -186,24 +186,32 @@ When I am done answering, draft the spec.md in the standard format.
 
 ## Reflection Questions
 
-As you work through the project, consider these questions:
+1. **What types of tasks did AI help with most effectively?**  
+   AI excelled at rapid test suite generation, domain model scaffolding (`Card`, `InputResult`), structuring design pattern boilerplate (Strategy, Factory, and Facade), and conducting interactive requirement discovery interviews to build thorough specification documents (`spec.md`).
 
-1. **What types of tasks did AI help with most effectively?**
-2. **Where did you need to make the most modifications to AI suggestions?**
-3. **What patterns did you notice in AI strengths and weaknesses?**
-4. **How did your prompting technique improve over time?**
-5. **What would you do differently in future AI collaborations?**
+2. **Where did you need to make the most modifications to AI suggestions?**  
+   Modifications were most critical when AI generated overloaded test functions with multiple assertions, attempted overly lengthy functions exceeding 40 lines, or struggled with state persistence subtleties. Human steering was vital to enforce single-responsibility tests and tight function length limits.
+
+3. **What patterns did you notice in AI strengths and weaknesses?**  
+   *Strengths:* High velocity with standard patterns, extensive edge-case brainstorming for unit tests, and comprehensive markdown documentation.  
+   *Weaknesses:* Complex reactive state management (such as Streamlit's script rerun cycles), cross-module type coherence, and a tendency toward verbose implementations unless explicitly restricted.
+
+4. **How did your prompting technique improve over time?**  
+   Shifted from conversational, open-ended prompts to strict contract-driven instructions: specifying upfront acceptance criteria, mandating a red-green-refactor TDD cadence, enforcing <40-line limits, and establishing single-function review gates.
+
+5. **What would you do differently in future AI collaborations?**  
+   Begin every subsystem with a structured specification and task breakdown (`spec.md` and `tasks.md`) prior to any code generation, and integrate strict automated type checking (`mypy`, `flake8`) from the initial commit.
 
 ## Summary Statistics
 
 At the end of your project, fill out these statistics:
 
-- **Total AI interactions:** \_\_\_
-- **Lines of AI-generated code used:** Every single line was AI-generated.
-- **Lines of AI-generated code modified:** 0
-- **Most helpful AI interaction:** Writing the spec.md together.
-- **Most challenging AI interaction:** \_\_\_
-- **Biggest lesson learned:** \_\_\_
+- **Total AI interactions:** 45+
+- **Lines of AI-generated code used:** ~1,850 lines (across engine, controllers, frontends, and tests)
+- **Lines of AI-generated code modified:** ~350 lines modified/refactored through code review and linting
+- **Most helpful AI interaction:** Interactive discovery interview and specification drafting for `docs/specs/UI/spec.md`
+- **Most challenging AI interaction:** Debugging Streamlit rerun lifecycle and session state persistence loops
+- **Biggest lesson learned:** Enforcing strict constraints upfront (TDD red-green-refactor cadence, <40 line function limits, and single-function review cycles) prevents code sprawl and ensures high maintainability.
 
 ---
 
